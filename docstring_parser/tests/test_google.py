@@ -132,7 +132,7 @@ def test_short_description(source: str, expected: str) -> None:
     docstring = parse(source)
     assert docstring.short_description == expected
     assert docstring.long_description is None
-    assert docstring.meta == []
+    assert not docstring.meta
 
 
 @pytest.mark.parametrize(
@@ -209,7 +209,7 @@ def test_long_description(
     assert docstring.short_description == expected_short_desc
     assert docstring.long_description == expected_long_desc
     assert docstring.blank_after_short_description == expected_blank
-    assert docstring.meta == []
+    assert not docstring.meta
 
 
 @pytest.mark.parametrize(
@@ -329,7 +329,7 @@ def test_meta_with_multiline_description() -> None:
     assert docstring.meta[0].description == "asd\n1\n    2\n3"
 
 
-def test_default_args():
+def test_default_args() -> None:
     """Test parsing default arguments."""
     docstring = parse(
         """A sample function
@@ -632,9 +632,9 @@ def test_examples() -> None:
             more here
         """
     )
-    assert len(docstring.meta) == 2
-    assert docstring.meta[0].description == "example: 1"
-    assert docstring.meta[1].description == "long example\n\nmore here"
+    assert len(docstring.examples) == 2
+    assert docstring.examples[0].description == "example: 1"
+    assert docstring.examples[1].description == "long example\n\nmore here"
 
 
 def test_broken_meta() -> None:
@@ -696,9 +696,9 @@ def test_empty_example() -> None:
         """
     )
 
-    assert len(docstring.meta) == 2
-    assert docstring.meta[0].args == ["examples"]
-    assert docstring.meta[0].description == ""
+    assert len(docstring.examples) == 1
+    assert docstring.examples[0].args == ["examples"]
+    assert docstring.examples[0].description == ""
 
 
 @pytest.mark.parametrize(

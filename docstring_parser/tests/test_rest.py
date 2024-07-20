@@ -2,8 +2,8 @@
 import typing as T
 
 import pytest
-from docstring_parser.common import ParseError
-from docstring_parser.rest import parse
+from docstring_parser.common import ParseError, RenderingStyle
+from docstring_parser.rest import compose, parse
 
 
 @pytest.mark.parametrize(
@@ -20,8 +20,9 @@ def test_short_description(source: str, expected: str) -> None:
     """Test parsing short description."""
     docstring = parse(source)
     assert docstring.short_description == expected
+    assert docstring.description == expected
     assert docstring.long_description is None
-    assert docstring.meta == []
+    assert not docstring.meta
 
 
 @pytest.mark.parametrize(
@@ -98,12 +99,13 @@ def test_long_description(
     assert docstring.short_description == expected_short_desc
     assert docstring.long_description == expected_long_desc
     assert docstring.blank_after_short_description == expected_blank
-    assert docstring.meta == []
+    assert not docstring.meta
 
 
 @pytest.mark.parametrize(
     "source, expected_short_desc, expected_long_desc, "
-    "expected_blank_short_desc, expected_blank_long_desc",
+    "expected_blank_short_desc, expected_blank_long_desc, "
+    "expected_full_desc",
     [
         (
             """
@@ -114,6 +116,7 @@ def test_long_description(
             None,
             False,
             False,
+            "Short description",
         ),
         (
             """
@@ -125,6 +128,7 @@ def test_long_description(
             "Long description",
             False,
             False,
+            "Short description\nLong description",
         ),
         (
             """
@@ -137,6 +141,7 @@ def test_long_description(
             "First line\n    Second line",
             False,
             False,
+            "Short description\nFirst line\n    Second line",
         ),
         (
             """
@@ -150,6 +155,7 @@ def test_long_description(
             "First line\n    Second line",
             True,
             False,
+            "Short description\n\nFirst line\n    Second line",
         ),
         (
             """
@@ -164,6 +170,7 @@ def test_long_description(
             "First line\n    Second line",
             True,
             True,
+            "Short description\n\nFirst line\n    Second line",
         ),
         (
             """
@@ -173,6 +180,7 @@ def test_long_description(
             None,
             False,
             False,
+            None,
         ),
     ],
 )
@@ -182,6 +190,7 @@ def test_meta_newlines(
     expected_long_desc: T.Optional[str],
     expected_blank_short_desc: bool,
     expected_blank_long_desc: bool,
+    expected_full_desc: T.Optional[str],
 ) -> None:
     """Test parsing newlines around description sections."""
     docstring = parse(source)
@@ -189,6 +198,7 @@ def test_meta_newlines(
     assert docstring.long_description == expected_long_desc
     assert docstring.blank_after_short_description == expected_blank_short_desc
     assert docstring.blank_after_long_description == expected_blank_long_desc
+    assert docstring.description == expected_full_desc
     assert len(docstring.meta) == 1
 
 
@@ -298,6 +308,22 @@ def test_params() -> None:
     assert docstring.params[4].is_optional
     assert docstring.params[4].default == "'bye'"
 
+    docstring = parse(
+        """
+        Short description
+
+        :param a: description a
+        :type a: int
+        :param int b: description b
+        """
+    )
+    assert len(docstring.params) == 2
+    assert docstring.params[0].arg_name == "a"
+    assert docstring.params[0].type_name == "int"
+    assert docstring.params[0].description == "description a"
+    assert docstring.params[0].default is None
+    assert not docstring.params[0].is_optional
+
 
 def test_returns() -> None:
     """Test parsing returns."""
@@ -320,9 +346,7 @@ def test_returns() -> None:
     assert docstring.returns.type_name is None
     assert docstring.returns.description == "description"
     assert not docstring.returns.is_generator
-    assert docstring.many_returns is not None
-    assert len(docstring.many_returns) == 1
-    assert docstring.many_returns[0] == docstring.returns
+    assert docstring.many_returns == [docstring.returns]
 
     docstring = parse(
         """
@@ -334,9 +358,20 @@ def test_returns() -> None:
     assert docstring.returns.type_name == "int"
     assert docstring.returns.description == "description"
     assert not docstring.returns.is_generator
-    assert docstring.many_returns is not None
-    assert len(docstring.many_returns) == 1
-    assert docstring.many_returns[0] == docstring.returns
+    assert docstring.many_returns == [docstring.returns]
+
+    docstring = parse(
+        """
+        Short description
+        :returns: description
+        :rtype: int
+        """
+    )
+    assert docstring.returns is not None
+    assert docstring.returns.type_name == "int"
+    assert docstring.returns.description == "description"
+    assert not docstring.returns.is_generator
+    assert docstring.many_returns == [docstring.returns]
 
 
 def test_yields() -> None:
@@ -438,3 +473,69 @@ def test_deprecation() -> None:
     assert docstring.deprecation is not None
     assert docstring.deprecation.version is None
     assert docstring.deprecation.description == "this function will be removed"
+
+
+@pytest.mark.parametrize(
+    "rendering_style, expected",
+    [
+        (
+            RenderingStyle.COMPACT,
+            "Short description.\n"
+            "\n"
+            "Long description.\n"
+            "\n"
+            ":param int foo: a description\n"
+            ":param int bar: another description\n"
+            ":returns float: a return",
+        ),
+        (
+            RenderingStyle.CLEAN,
+            "Short description.\n"
+            "\n"
+            "Long description.\n"
+            "\n"
+            ":param int foo: a description\n"
+            ":param int bar: another description\n"
+            ":returns float: a return",
+        ),
+        (
+            RenderingStyle.EXPANDED,
+            "Short description.\n"
+            "\n"
+            "Long description.\n"
+            "\n"
+            ":param foo:\n"
+            "    a description\n"
+            ":type foo: int\n"
+            ":param bar:\n"
+            "    another description\n"
+            ":type bar: int\n"
+            ":returns:\n"
+            "    a return\n"
+            ":rtype: float",
+        ),
+    ],
+)
+def test_compose(rendering_style: RenderingStyle, expected: str) -> None:
+    """Test compose"""
+
+    docstring = parse(
+        """
+        Short description.
+
+        Long description.
+
+        :param int foo: a description
+        :param int bar: another description
+        :return float: a return
+        """
+    )
+    assert compose(docstring, rendering_style=rendering_style) == expected
+
+
+def test_short_rtype() -> None:
+    """Test abbreviated docstring with only return type information."""
+    string = "Short description.\n\n:rtype: float"
+    docstring = parse(string)
+    rendering_style = RenderingStyle.EXPANDED
+    assert compose(docstring, rendering_style=rendering_style) == string

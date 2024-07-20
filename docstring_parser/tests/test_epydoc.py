@@ -21,7 +21,7 @@ def test_short_description(source: str, expected: str) -> None:
     docstring = parse(source)
     assert docstring.short_description == expected
     assert docstring.long_description is None
-    assert docstring.meta == []
+    assert not docstring.meta
 
 
 @pytest.mark.parametrize(
@@ -98,7 +98,7 @@ def test_long_description(
     assert docstring.short_description == expected_short_desc
     assert docstring.long_description == expected_long_desc
     assert docstring.blank_after_short_description == expected_blank
-    assert docstring.meta == []
+    assert not docstring.meta
 
 
 @pytest.mark.parametrize(
@@ -714,3 +714,10 @@ def test_compose_expanded(source: str, expected: str) -> None:
         compose(parse(source), rendering_style=RenderingStyle.EXPANDED)
         == expected
     )
+
+
+def test_short_rtype() -> None:
+    """Test abbreviated docstring with only return type information."""
+    string = "Short description.\n\n@rtype: float"
+    docstring = parse(string)
+    assert compose(docstring) == string

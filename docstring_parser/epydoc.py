@@ -76,9 +76,7 @@ def parse(text: str) -> Docstring:
 
         match = param_match or raise_match or return_match or meta_match
         if not match:
-            raise ParseError(
-                'Error parsing meta information near "{}".'.format(chunk)
-            )
+            raise ParseError(f'Error parsing meta information near "{chunk}".')
 
         desc_chunk = chunk[match.end() :]
         if param_match:
@@ -111,7 +109,7 @@ def parse(text: str) -> Docstring:
                 "ytype",
             ]:
                 raise ParseError(
-                    'Error parsing meta information near "{}".'.format(chunk)
+                    f'Error parsing meta information near "{chunk}".'
                 )
 
         desc = desc_chunk.strip()
@@ -135,7 +133,7 @@ def parse(text: str) -> Docstring:
             is_generator = key in {"ytype", "yield"}
             if info.setdefault("is_generator", is_generator) != is_generator:
                 raise ParseError(
-                    'Error parsing meta information for "{}".'.format(arg_name)
+                    f'Error parsing meta information for "{arg_name}".'
                 )
 
     is_done: T.Dict[str, bool] = {}
@@ -156,7 +154,7 @@ def parse(text: str) -> Docstring:
 
             meta_item = DocstringParam(
                 args=[key, arg_name],
-                description=info["description"],
+                description=info.get("description"),
                 arg_name=arg_name,
                 type_name=type_name,
                 is_optional=is_optional,
@@ -167,7 +165,7 @@ def parse(text: str) -> Docstring:
             info = params["return"]
             meta_item = DocstringReturns(
                 args=[key],
-                description=info["description"],
+                description=info.get("description"),
                 type_name=info.get("type_name"),
                 is_generator=info.get("is_generator", False),
             )
@@ -256,8 +254,9 @@ def compose(
             if meta.type_name:
                 text = f"@{type_key}:" + process_desc(meta.type_name, True)
                 parts.append(text)
-            text = f"@{arg_key}:" + process_desc(meta.description, False)
-            parts.append(text)
+            if meta.description:
+                text = f"@{arg_key}:" + process_desc(meta.description, False)
+                parts.append(text)
         elif isinstance(meta, DocstringRaises):
             text = f"@raise {meta.type_name}:" if meta.type_name else "@raise:"
             text += process_desc(meta.description, False)

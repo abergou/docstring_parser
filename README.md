@@ -1,6 +1,8 @@
 docstring_parser
 ================
 
+[![Build](https://github.com/rr-/docstring_parser/actions/workflows/build.yml/badge.svg)](https://github.com/rr-/docstring_parser/actions/workflows/build.yml)
+
 Parse Python docstrings. Currently support ReST, Google, Numpydoc-style and
 Epydoc docstrings.
 
@@ -33,7 +35,45 @@ Example usage:
 'ValueError'
 ```
 
+Read [API Documentation](https://rr-.github.io/docstring_parser/).
+
+# Installation
+
+Installation using pip
+
+```shell
+pip install docstring_parser
+
+# or if you want to install it in a virtual environment
+
+python -m venv venv # create environment
+source venv/bin/activate # activate environment
+python -m pip install docstring_parser
+```
+
+Installation using conda
+
+
+1. Download and install miniconda or anaconda
+2. Install the package from the conda-forge channel via:
+  - `conda install -c conda-forge docstring_parser`
+  - or create a new conda environment via `conda create -n my-new-environment -c conda-forge docstring_parser`
+
+
 # Contributing
 
-This project uses [precommit](https://pre-commit.com/). You can install it with
-`python3 -m pip install --user pre-commit` and running `pre-commit install`.
+To set up the project:
+```sh
+pip install --user poetry
+
+git clone https://github.com/rr-/docstring_parser.git
+cd docstring_parser
+
+poetry install
+poetry run pre-commit install
+```
+
+To run tests:
+```
+poetry run pytest
+```

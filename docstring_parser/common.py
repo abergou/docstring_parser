@@ -15,6 +15,7 @@ RAISES_KEYWORDS = {"raises", "raise", "except", "exception"}
 DEPRECATION_KEYWORDS = {"deprecation", "deprecated"}
 RETURNS_KEYWORDS = {"return", "returns"}
 YIELDS_KEYWORDS = {"yield", "yields"}
+EXAMPLES_KEYWORDS = {"example", "examples"}
 
 
 class ParseError(RuntimeError):
@@ -130,6 +131,21 @@ class DocstringDeprecated(DocstringMeta):
         self.description = description
 
 
+class DocstringExample(DocstringMeta):
+    """DocstringMeta symbolizing example metadata."""
+
+    def __init__(
+        self,
+        args: T.List[str],
+        snippet: T.Optional[str],
+        description: T.Optional[str],
+    ) -> None:
+        """Initialize self."""
+        super().__init__(args, description)
+        self.snippet = snippet
+        self.description = description
+
+
 class Docstring:
     """Docstring object representation."""
 
@@ -144,6 +160,25 @@ class Docstring:
         self.blank_after_long_description = False
         self.meta = []  # type: T.List[DocstringMeta]
         self.style = style  # type: T.Optional[DocstringStyle]
+
+    @property
+    def description(self) -> T.Optional[str]:
+        """Return the full description of the function
+
+        Returns None if the docstring did not include any description
+        """
+        ret = []
+        if self.short_description:
+            ret.append(self.short_description)
+            if self.blank_after_short_description:
+                ret.append("")
+        if self.long_description:
+            ret.append(self.long_description)
+
+        if not ret:
+            return None
+
+        return "\n".join(ret)
 
     @property
     def params(self) -> T.List[DocstringParam]:
@@ -184,3 +219,10 @@ class Docstring:
             if isinstance(item, DocstringDeprecated):
                 return item
         return None
+
+    @property
+    def examples(self) -> T.List[DocstringExample]:
+        """Return a list of information on function examples."""
+        return [
+            item for item in self.meta if isinstance(item, DocstringExample)
+        ]

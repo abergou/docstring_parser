@@ -7,11 +7,13 @@ from collections import OrderedDict, namedtuple
 from enum import IntEnum
 
 from .common import (
+    EXAMPLES_KEYWORDS,
     PARAM_KEYWORDS,
     RAISES_KEYWORDS,
     RETURNS_KEYWORDS,
     YIELDS_KEYWORDS,
     Docstring,
+    DocstringExample,
     DocstringMeta,
     DocstringParam,
     DocstringRaises,
@@ -83,7 +85,7 @@ class GoogleParser:
             colon = ""
         self.titles_re = re.compile(
             "^("
-            + "|".join("(%s)" % t for t in self.sections)
+            + "|".join(f"({t})" for t in self.sections)
             + ")"
             + colon
             + "[ \t\r\f\v]*$",
@@ -107,7 +109,7 @@ class GoogleParser:
             return self._build_single_meta(section, text)
 
         if ":" not in text:
-            raise ParseError("Expected a colon in {}.".format(repr(text)))
+            raise ParseError(f"Expected a colon in {text!r}.")
 
         # Split spec and description
         before, desc = text.split(":", 1)
@@ -132,6 +134,10 @@ class GoogleParser:
         if section.key in RAISES_KEYWORDS:
             return DocstringRaises(
                 args=[section.key], description=desc, type_name=None
+            )
+        if section.key in EXAMPLES_KEYWORDS:
+            return DocstringExample(
+                args=[section.key], snippet=None, description=desc
             )
         if section.key in PARAM_KEYWORDS:
             raise ParseError("Expected paramenter name.")
@@ -253,7 +259,7 @@ class GoogleParser:
             # Determine indent
             indent_match = re.search(r"^\s*", chunk)
             if not indent_match:
-                raise ParseError('Can\'t infer indent from "{}"'.format(chunk))
+                raise ParseError(f'Can\'t infer indent from "{chunk}"')
             indent = indent_match.group()
 
             # Check for singular elements
@@ -269,9 +275,7 @@ class GoogleParser:
             _re = "^" + indent + r"(?=\S)"
             c_matches = list(re.finditer(_re, chunk, flags=re.M))
             if not c_matches:
-                raise ParseError(
-                    'No specification for "{}": "{}"'.format(title, chunk)
-                )
+                raise ParseError(f'No specification for "{title}": "{chunk}"')
             c_splits = []
             for j in range(len(c_matches) - 1):
                 c_splits.append((c_matches[j].end(), c_matches[j + 1].start()))
